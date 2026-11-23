@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Turbo Poyga - 2D Extreme Racing Game</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Game Container -->
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hidden">
+      <!-- Top Bar: Position, Lap, Timer -->
+      <div class="hud-top">
+        <div class="hud-box position-box">
+          <span class="hud-label">O'RIN</span>
+          <span id="player-position" class="hud-val">1<span class="hud-sub">/4</span></span>
+        </div>
+
+        <div class="hud-box lap-box">
+          <span class="hud-label">AYLANISH</span>
+          <span id="lap-counter" class="hud-val">1<span class="hud-sub">/3</span></span>
+        </div>
+
+        <div class="hud-box time-box">
+          <span class="hud-label">VAQT</span>
+          <span id="race-timer" class="hud-val">00:00.00</span>
+          <div class="best-lap-row">Eng yaxshi: <span id="best-lap-time">--:--.--</span></div>
+        </div>
+
+        <div class="hud-actions">
+          <button id="btn-sound-toggle" class="icon-btn" title="Ovozni yoqish/o'chirish">🔊</button>
+          <button id="btn-pause" class="icon-btn" title="To'xtatish (Pause)">⏸</button>
+        </div>
+      </div>
+
+      <!-- Minimap (Radar) -->
+      <div id="minimap-container">
+        <canvas id="minimapCanvas" width="180" height="180"></canvas>
+      </div>
+
+      <!-- Leaderboard live widget -->
+      <div id="live-standings">
+        <div class="standings-title">🏁 Jonli Jadval</div>
+        <div id="standings-list"></div>
+      </div>
+
+      <!-- Bottom Bar: Speedometer, Nitro, Controls Hint -->
+      <div class="hud-bottom">
+        <div class="speed-cluster">
+          <div class="speed-display">
+            <span id="speed-val">0</span>
+            <span class="speed-unit">KM/H</span>
+          </div>
+          <div class="speed-bar-container">
+            <div id="speed-bar" class="speed-bar"></div>
+          </div>
+        </div>
+
+        <div class="nitro-cluster">
+          <div class="nitro-label">NITRO (SHIFT / BO'SH JOY)</div>
+          <div class="nitro-bar-container">
+            <div id="nitro-bar" class="nitro-bar"></div>
+          </div>
+        </div>
+
+        <div class="hint-cluster">
+          <span>🎮 <b>W / ↑</b> Gaz</span>
+          <span><b>S / ↓</b> Tormoz / Orqaga</span>
+          <span><b>A D / ← →</b> Burilish</span>
+          <span><b>Shift / Space</b> Nitro</span>
+          <span><b>R</b> Qayta tiklash</span>
+        </div>
+      </div>
+
+      <!-- Notification overlay (Wrong Way, Lap Complete, etc.) -->
+      <div id="hud-message" class="hud-msg hidden"></div>
+
+      <!-- Countdown 3, 2, 1, GO! -->
+      <div id="countdown-overlay" class="countdown-overlay hidden">
+        <span id="countdown-text">3</span>
+      </div>
+
+      <!-- Touch Controls for Mobile/Tablets -->
+      <div id="touch-controls" class="touch-controls hidden">
+        <div class="touch-steering">
+          <button id="btn-left" class="touch-btn">◀</button>
+          <button id="btn-right" class="touch-btn">▶</button>
+        </div>
+        <div class="touch-pedals">
+          <button id="btn-brake" class="touch-btn btn-brake">TORMOZ</button>
+          <button id="btn-nitro" class="touch-btn btn-nitro">⚡ NITRO</button>
+          <button id="btn-gas" class="touch-btn btn-gas">GAZ ▲</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="main-menu" class="screen-overlay">
+      <div class="menu-card glass-panel">
+        <div class="logo-box">
+          <h1 class="game-title">TURBO <span>POYGA</span></h1>
+          <p class="game-subtitle">2D Pro Racing & Drift Chempionati</p>
+        </div>
+
+        <!-- Track Selection Carousel -->
+        <div class="selection-section">
+          <h3 class="section-title">1. YO'LNI (TRASSANI) TANLANG</h3>
+          <div class="track-picker" id="track-picker">
+            <!-- Rendered dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Car Selection Section -->
+        <div class="selection-section">
+          <h3 class="section-title">2. MOSHINANGIZNI TANLANG</h3>
+          <div class="car-picker" id="car-picker">
+            <!-- Rendered dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Bot count & Laps config -->
+        <div class="selection-section config-row">
+          <div class="config-item">
+            <label for="select-laps">Aylanishlar soni:</label>
+            <select id="select-laps">
+              <option value="2">2 Aylanish</option>
+              <option value="3" selected>3 Aylanish</option>
+              <option value="5">5 Aylanish</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label for="select-bots">Raqib Botlar soni:</label>
+            <select id="select-bots">
+              <option value="1">1 ta Bot</option>
+              <option value="2">2 ta Bot</option>
+              <option value="3" selected>3 ta Bot (Tavsiya)</option>
+              <option value="5">5 ta Bot (Tirband poyga)</option>
+            </select>
+          </div>
+          <div class="config-item">
+            <label for="select-difficulty">Qiyinlik darajasi:</label>
+            <select id="select-difficulty">
+              <option value="easy">Oson (Yengil)</option>
+              <option value="medium" selected>O'rta (Professional)</option>
+              <option value="hard">Qiyin (Ekstremal)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="btn-start-race" class="btn-primary pulse">POYGANi BOSHLASH 🏎️</button>
+          <button id="btn-instructions" class="btn-secondary">QOIDALAR VA BOSHQARUV ❓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAUSE SCREEN -->
+    <div id="pause-screen" class="screen-overlay hidden">
+      <div class="pause-card glass-panel">
+        <h2>O'YIN TO'XTATILDI</h2>
+        <div class="pause-buttons">
+          <button id="btn-resume" class="btn-primary">DAVOM ETTIRISH ▶</button>
+          <button id="btn-restart" class="btn-secondary">QAYTADAN BOSHLASH 🔄</button>
+          <button id="btn-change-track" class="btn-secondary">YO'LNI O'ZGARTIRISH 🛣️</button>
+          <button id="btn-to-main-menu" class="btn-danger">ASOSIY MENYUGA CHIQISH 🚪</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RACE FINISH RESULTS SCREEN -->
+    <div id="results-screen" class="screen-overlay hidden">
+      <div class="results-card glass-panel">
+        <h2 id="result-title">MARRA!</h2>
+        <div id="result-badge" class="result-badge">1-O'RIN 🏆</div>
+        <p id="result-message">Tabriklaymiz, ajoyib poyga bo'ldi!</p>
+
+        <div class="results-stats">
+          <div class="stat-box">
+            <span class="stat-label">Umumiy Vaqt</span>
+            <span id="result-total-time" class="stat-val">00:00.00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Eng Tez Aylanish</span>
+            <span id="result-best-lap" class="stat-val">00:00.00</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Maksimal Tezlik</span>
+            <span id="result-max-speed" class="stat-val">0 km/h</span>
+          </div>
+        </div>
+
+        <div class="final-leaderboard">
+          <h3>Poyga Natijalari:</h3>
+          <table id="leaderboard-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Poygachi</th>
+                <th>Moshina</th>
+                <th>Status / Vaqt</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+
+        <div class="results-actions">
+          <button id="btn-play-again" class="btn-primary">YANA O'YNASH 🔁</button>
+          <button id="btn-results-change-track" class="btn-secondary">BOSHQA YO'LNI TANLASH 🛣️</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INSTRUCTIONS MODAL -->
+    <div id="instructions-modal" class="screen-overlay hidden">
+      <div class="modal-card glass-panel">
+        <h2>Poyga Qoidalari va Boshqaruv</h2>
+        <div class="instruction-content">
+          <div class="inst-col">
+            <h4>Boshqaruv tugmalari:</h4>
+            <ul>
+              <li><b>W yoki Yuqoriga o'q (↑):</b> Oldinga gaz berish</li>
+              <li><b>S yoki Pastga o'q (↓):</b> Tormoz va orqaga yurish</li>
+              <li><b>A / D yoki Chapga / O'ngga (← / →):</b> Rulni burish</li>
+              <li><b>Shift yoki Bo'sh joy (Space):</b> Nitro turbo tezlashuv</li>
+              <li><b>R:</b> Moshinani yo'lga qayta tiklash (agar adashib ketsangiz)</li>
+              <li><b>P yoki Esc:</b> O'yinni to'xtatish (Pause)</li>
+            </ul>
+          </div>
+          <div class="inst-col">
+            <h4>Poyga maslahatlari:</h4>
+            <ul>
+              <li><b>Yo'ldan chiqib ketmang:</b> Maysa yoki qumda moshina sekinlashadi!</li>
+              <li><b>Burilishlarda tormoz:</b> Burilishdan oldin ozgina tormoz bering va drift qiling.</li>
+              <li><b>Botlar bilan kurash:</b> Botlar sizni quvib o'tishga harakat qiladi, ularga yo'l bermang!</li>
+              <li><b>Nitro quvvati:</b> Nitro to'lganda to'g'ri yo'llarda tezlikni oshirish uchun foydalaning.</li>
+            </ul>
+          </div>
+        </div>
+        <button id="btn-close-instructions" class="btn-primary">TUSHUNDIM 👍</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/audio.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/tracks.js"></script>
+  <script src="js/car.js"></script>
+  <script src="js/bot.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
